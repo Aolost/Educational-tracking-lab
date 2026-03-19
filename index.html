@@ -6,117 +6,94 @@
     <title>Educational Tracking Lab</title>
     <style>
         body { font-family: sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; background: #f4f4f9; }
-        .card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: center; }
         h1 { color: #333; }
-        button { background: #0070f3; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 1rem; }
-        button:hover { background: #005bb5; }
-        pre { background: #eee; padding: 15px; border-radius: 6px; overflow-x: auto; font-size: 0.85rem; }
-        .status { margin-top: 15px; font-weight: bold; }
-        .success { color: green; }
-        .error { color: red; }
+        .status { margin-top: 20px; font-weight: bold; padding: 10px; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        pre { background: #eee; padding: 10px; border-radius: 5px; font-size: 0.8rem; text-align: left; }
     </style>
 </head>
 <body>
     <div class="card">
         <h1>🔍 Educational Tracking Lab</h1>
-        <p>This page demonstrates how web analytics work. All data collection is transparent and consensual.</p>
+        <p><strong>Note:</strong> This is a demo. Your basic data (IP, Device) is logged automatically for educational purposes.</p>
         
-        <h3>Data to be collected:</h3>
-        <pre id="preview">Loading...</pre>
+        <div id="status" class="status info">⏳ Initializing tracking...</div>
         
-        <button onclick="startTracking()">I Agree & Continue</button>
-        <div id="status" class="status"></div>
-        
-        <p style="margin-top: 30px; font-size: 0.8rem; color: #666;">
-            <strong>Note:</strong> This is for educational purposes only. No data is stored permanently.
-        </p>
+        <div style="margin-top: 20px;">
+            <h3>Data Collected:</h3>
+            <pre id="data-preview">Loading...</pre>
+        </div>
     </div>
 
     <script>
-        // ⚠️ YOU WILL UPDATE THIS URL AFTER DEPLOYING THE BACKEND
-        const API_URL = 'https://YOUR-WORKER-URL.workers.dev'; 
+        // ⚠️ PASTE YOUR WORKER URL HERE
+        const API_URL = 'https://educational-tracking-lab.aolost-dev.workers.dev'; 
 
-        let collectedData = {};
-
-        // Gather basic info immediately
-        async function gatherPreview() {
-            collectedData = {
+        async function track() {
+            const status = document.getElementById('status');
+            const preview = document.getElementById('data-preview');
+            
+            // 1. Gather Basic Data (Automatic)
+            const data = {
                 userAgent: navigator.userAgent,
                 language: navigator.language,
                 screen: `${window.screen.width}x${window.screen.height}`,
                 timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                type: "auto-track"
             };
 
-            // Get public IP
+            // 2. Get Public IP (Optional - adds detail)
             try {
                 const res = await fetch('https://api.ipify.org?format=json');
                 const ip = await res.json();
-                collectedData.ip = ip.ip;
+                data.ip = ip.ip;
             } catch (e) {
-                collectedData.ip = 'Hidden';
+                data.ip = "Hidden by Browser";
             }
 
-            document.getElementById('preview').innerText = JSON.stringify(collectedData, null, 2);
-        }
+            // 3. Show Preview to User (Transparency)
+            preview.innerText = JSON.stringify(data, null, 2);
 
-        // Handle consent and tracking
-        async function startTracking() {
-            const btn = document.querySelector('button');
-            const status = document.getElementById('status');
-            
-            btn.disabled = true;
-            btn.innerText = 'Processing...';
+            // 4. Send to Backend (Silent)
+            try {
+                await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                status.innerText = "✅ Data logged successfully (Check Cloudflare Dashboard)";
+                status.className = "status success";
+            } catch (e) {
+                status.innerText = "❌ Error sending data";
+                status.className = "status error";
+            }
 
-            // Request GPS location
+            // 5. Request GPS (Optional - Will show popup)
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(
                     (pos) => {
-                        collectedData.latitude = pos.coords.latitude;
-                        collectedData.longitude = pos.coords.longitude;
-                        collectedData.locationType = 'GPS';
-                        sendData();
+                        data.latitude = pos.coords.latitude;
+                        data.longitude = pos.coords.longitude;
+                        // Update preview with GPS
+                        preview.innerText = JSON.stringify(data, null, 2);
+                        // Send updated data
+                        fetch(API_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(data)
+                        });
                     },
-                    (err) => {
-                        collectedData.locationType = 'IP Only';
-                        collectedData.gpsError = err.message;
-                        sendData();
-                    }
+                    () => {} // Ignore if denied
                 );
-            } else {
-                sendData();
             }
         }
 
-        // Send data to backend
-        async function sendData() {
-            const status = document.getElementById('status');
-            
-            try {
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(collectedData)
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    status.innerText = '✅ Data sent successfully! Check Cloudflare logs.';
-                    status.className = 'status success';
-                } else {
-                    throw new Error('Server returned error');
-                }
-            } catch (e) {
-                status.innerText = '❌ Error: ' + e.message;
-                status.className = 'status error';
-                document.querySelector('button').disabled = false;
-                document.querySelector('button').innerText = 'Retry';
-            }
-        }
-
-        // Initialize
-        gatherPreview();
+        // 🚀 Run Immediately on Page Load
+        window.onload = track;
     </script>
 </body>
 </html>

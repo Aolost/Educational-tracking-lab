@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Educational Tracking Lab</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; background: #f4f4f9; }
+        .card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h1 { color: #333; }
+        button { background: #0070f3; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 1rem; }
+        button:hover { background: #005bb5; }
+        pre { background: #eee; padding: 15px; border-radius: 6px; overflow-x: auto; font-size: 0.85rem; }
+        .status { margin-top: 15px; font-weight: bold; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🔍 Educational Tracking Lab</h1>
+        <p>This page demonstrates how web analytics work. All data collection is transparent and consensual.</p>
+        
+        <h3>Data to be collected:</h3>
+        <pre id="preview">Loading...</pre>
+        
+        <button onclick="startTracking()">I Agree & Continue</button>
+        <div id="status" class="status"></div>
+        
+        <p style="margin-top: 30px; font-size: 0.8rem; color: #666;">
+            <strong>Note:</strong> This is for educational purposes only. No data is stored permanently.
+        </p>
+    </div>
+
+    <script>
+        // ⚠️ YOU WILL UPDATE THIS URL AFTER DEPLOYING THE BACKEND
+        const API_URL = 'https://YOUR-WORKER-URL.workers.dev'; 
+
+        let collectedData = {};
+
+        // Gather basic info immediately
+        async function gatherPreview() {
+            collectedData = {
+                userAgent: navigator.userAgent,
+                language: navigator.language,
+                screen: `${window.screen.width}x${window.screen.height}`,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                timestamp: new Date().toISOString()
+            };
+
+            // Get public IP
+            try {
+                const res = await fetch('https://api.ipify.org?format=json');
+                const ip = await res.json();
+                collectedData.ip = ip.ip;
+            } catch (e) {
+                collectedData.ip = 'Hidden';
+            }
+
+            document.getElementById('preview').innerText = JSON.stringify(collectedData, null, 2);
+        }
+
+        // Handle consent and tracking
+        async function startTracking() {
+            const btn = document.querySelector('button');
+            const status = document.getElementById('status');
+            
+            btn.disabled = true;
+            btn.innerText = 'Processing...';
+
+            // Request GPS location
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        collectedData.latitude = pos.coords.latitude;
+                        collectedData.longitude = pos.coords.longitude;
+                        collectedData.locationType = 'GPS';
+                        sendData();
+                    },
+                    (err) => {
+                        collectedData.locationType = 'IP Only';
+                        collectedData.gpsError = err.message;
+                        sendData();
+                    }
+                );
+            } else {
+                sendData();
+            }
+        }
+
+        // Send data to backend
+        async function sendData() {
+            const status = document.getElementById('status');
+            
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(collectedData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    status.innerText = '✅ Data sent successfully! Check Cloudflare logs.';
+                    status.className = 'status success';
+                } else {
+                    throw new Error('Server returned error');
+                }
+            } catch (e) {
+                status.innerText = '❌ Error: ' + e.message;
+                status.className = 'status error';
+                document.querySelector('button').disabled = false;
+                document.querySelector('button').innerText = 'Retry';
+            }
+        }
+
+        // Initialize
+        gatherPreview();
+    </script>
+</body>
+</html>
