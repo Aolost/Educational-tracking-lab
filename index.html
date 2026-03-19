@@ -3,97 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Educational Tracking Lab</title>
+    <title>Video Loading...</title>
     <style>
-        body { font-family: sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; background: #f4f4f9; }
-        .card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: center; }
-        h1 { color: #333; }
-        .status { margin-top: 20px; font-weight: bold; padding: 10px; border-radius: 5px; }
-        .success { background: #d4edda; color: #155724; }
-        .info { background: #d1ecf1; color: #0c5460; }
-        pre { background: #eee; padding: 10px; border-radius: 5px; font-size: 0.8rem; text-align: left; }
+        body { font-family: sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 400px; text-align: center; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
     <div class="card">
-        <h1>🔍 Educational Tracking Lab</h1>
-        <p><strong>Note:</strong> This is a demo. Your basic data (IP, Device) is logged automatically for educational purposes.</p>
-        
-        <div id="status" class="status info">⏳ Initializing tracking...</div>
-        
-        <div style="margin-top: 20px;">
-            <h3>Data Collected:</h3>
-            <pre id="data-preview">Loading...</pre>
-        </div>
+        <h1>🎬 Loading Video...</h1>
+        <p>Please wait...</p>
+        <div class="loader"></div>
     </div>
 
     <script>
-        // ⚠️ PASTE YOUR WORKER URL HERE
-        const API_URL = 'https://educational-tracking-lab.aolost-dev.workers.dev'; 
+        // ⚠️ CHECK THIS URL MATCHES YOUR WORKER
+        const API_URL = 'https://educational-tracking-lab.aolost-dev.workers.dev';
+        const REDIRECT_URL = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
 
-        async function track() {
-            const status = document.getElementById('status');
-            const preview = document.getElementById('data-preview');
-            
-            // 1. Gather Basic Data (Automatic)
+        async function trackAndRedirect() {
             const data = {
-                userAgent: navigator.userAgent,
+                device: navigator.userAgent,
                 language: navigator.language,
-                screen: `${window.screen.width}x${window.screen.height}`,
-                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                timestamp: new Date().toISOString(),
-                type: "auto-track"
+                type: "rick-roll-track"
             };
 
-            // 2. Get Public IP (Optional - adds detail)
-            try {
-                const res = await fetch('https://api.ipify.org?format=json');
-                const ip = await res.json();
-                data.ip = ip.ip;
-            } catch (e) {
-                data.ip = "Hidden by Browser";
-            }
-
-            // 3. Show Preview to User (Transparency)
-            preview.innerText = JSON.stringify(data, null, 2);
-
-            // 4. Send to Backend (Silent)
             try {
                 await fetch(API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
                 });
-                
-                status.innerText = "✅ Data logged successfully (Check Cloudflare Dashboard)";
-                status.className = "status success";
+                // Wait 1 second to ensure log saves
+                await new Promise(r => setTimeout(r, 1000));
+                window.location.href = REDIRECT_URL;
             } catch (e) {
-                status.innerText = "❌ Error sending data";
-                status.className = "status error";
-            }
-
-            // 5. Request GPS (Optional - Will show popup)
-            if ("geolocation" in navigator) {
-                navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                        data.latitude = pos.coords.latitude;
-                        data.longitude = pos.coords.longitude;
-                        // Update preview with GPS
-                        preview.innerText = JSON.stringify(data, null, 2);
-                        // Send updated data
-                        fetch(API_URL, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(data)
-                        });
-                    },
-                    () => {} // Ignore if denied
-                );
+                window.location.href = REDIRECT_URL;
             }
         }
 
-        // 🚀 Run Immediately on Page Load
-        window.onload = track;
+        trackAndRedirect();
     </script>
 </body>
 </html>
