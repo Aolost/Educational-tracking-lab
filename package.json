@@ -1,0 +1,12 @@
+{
+  "name": "educational-tracking-lab",
+  "version": "1.0.0",
+  "description": "Educational Tracking Lab with Cloudflare Workers",
+  "main": "index.html",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["tracking", "education", "cloudflare"],
+  "author": "Your Name",
+  "license": "MIT"
+}
